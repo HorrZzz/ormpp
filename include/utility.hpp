@@ -3,11 +3,20 @@
 //
 #ifndef ORM_UTILITY_HPP
 #define ORM_UTILITY_HPP
+#include <optional>
+
 #include "entity.hpp"
 #include "iguana/reflection.hpp"
 #include "type_mapping.hpp"
 
 namespace ormpp {
+
+template <typename T>
+struct is_optional_v : std::false_type {};
+
+template <typename T>
+struct is_optional_v<std::optional<T>> : std::true_type {};
+
 template <typename... Args>
 struct value_of;
 
@@ -83,17 +92,32 @@ inline constexpr auto get_type_names(DBType type) {
     }
 #ifdef ORMPP_ENABLE_MYSQL
     else if (type == DBType::mysql) {
-      s = ormpp_mysql::type_to_name(identity<U>{});
+      if constexpr (is_optional_v<U>::value) {
+        s = ormpp_mysql::type_to_name(identity<typename U::value_type>{});
+      }
+      else {
+        s = ormpp_mysql::type_to_name(identity<U>{});
+      }
     }
 #endif
 #ifdef ORMPP_ENABLE_SQLITE3
     else if (type == DBType::sqlite) {
-      s = ormpp_sqlite::type_to_name(identity<U>{});
+      if constexpr (is_optional_v<U>::value) {
+        s = ormpp_sqlite::type_to_name(identity<typename U::value_type>{});
+      }
+      else {
+        s = ormpp_sqlite::type_to_name(identity<U>{});
+      }
     }
 #endif
 #ifdef ORMPP_ENABLE_PG
     else if (type == DBType::postgresql) {
-      s = ormpp_postgresql::type_to_name(identity<U>{});
+      if constexpr (is_optional_v<U>::value) {
+        s = ormpp_postgresql::type_to_name(identity<typename U::value_type>{});
+      }
+      else {
+        s = ormpp_postgresql::type_to_name(identity<U>{});
+      }
     }
 #endif
 
@@ -277,9 +301,9 @@ struct field_attribute<U T::*> {
 
 template <typename U>
 constexpr std::string_view get_field_name(std::string_view full_name) {
-  using T = typename field_attribute<U>::type;
-  return full_name.substr(iguana::get_name<T>().length() + 2,
-                          full_name.length());
+  using T = decltype(iguana_reflect_members(
+      std::declval<typename field_attribute<U>::type>()));
+  return full_name.substr(T::struct_name().length() + 2, full_name.length());
 }
 
 #define FID(field)                                                       \

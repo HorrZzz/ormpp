@@ -58,6 +58,9 @@ class sqlite {
     //            }
 
     std::string sql = generate_createtb_sql<T>(std::forward<Args>(args)...);
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     if (sqlite3_exec(handle_, sql.data(), nullptr, nullptr, nullptr) !=
         SQLITE_OK) {
       set_last_error(sqlite3_errmsg(handle_));
@@ -102,6 +105,9 @@ class sqlite {
   template <typename T, typename... Args>
   bool delete_records(Args &&...where_conditon) {
     auto sql = generate_delete_sql<T>(std::forward<Args>(where_conditon)...);
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     if (sqlite3_exec(handle_, sql.data(), nullptr, nullptr, nullptr) !=
         SQLITE_OK) {
       set_last_error(sqlite3_errmsg(handle_));
@@ -117,7 +123,9 @@ class sqlite {
   std::enable_if_t<iguana::is_reflection_v<T>, std::vector<T>> query(
       Args &&...args) {
     std::string sql = generate_query_sql<T>(args...);
-
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     int result = sqlite3_prepare_v2(handle_, sql.data(), (int)sql.size(),
                                     &stmt_, nullptr);
     if (result != SQLITE_OK) {
@@ -154,6 +162,9 @@ class sqlite {
     constexpr auto SIZE = std::tuple_size_v<T>;
 
     std::string sql = s;
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     constexpr auto Args_Size = sizeof...(Args);
     if constexpr (Args_Size != 0) {
       if (Args_Size != std::count(sql.begin(), sql.end(), '?'))
@@ -353,8 +364,14 @@ class sqlite {
   template <typename T>
   bool set_param_bind(T &&value, int i) {
     using U = std::remove_const_t<std::remove_reference_t<T>>;
-    if constexpr (std::is_integral_v<U> &&
-                  !iguana::is_int64_v<U>) {  // double, int64
+    if constexpr (is_optional_v<U>::value) {
+      if (value.has_value()) {
+        return set_param_bind(std::move(value.value()), i);
+      }
+      return SQLITE_OK == sqlite3_bind_null(stmt_, i);
+    }
+    else if constexpr (std::is_integral_v<U> &&
+                       !iguana::is_int64_v<U>) {  // double, int64
       return SQLITE_OK == sqlite3_bind_int(stmt_, i, value);
     }
     else if constexpr (iguana::is_int64_v<U>) {
@@ -372,8 +389,7 @@ class sqlite {
              sqlite3_bind_text(stmt_, i, value, sizeof(U), nullptr);
     }
     else {
-      std::cout << "this type has not supported yet" << std::endl;
-      return false;
+      static_assert(!sizeof(U), "this type has not supported yet");
     }
   }
 
@@ -404,13 +420,16 @@ class sqlite {
       memcpy(value, sqlite3_column_text(stmt_, i), sizeof(U));
     }
     else {
-      std::cout << "this type has not supported yet" << std::endl;
+      static_assert(!sizeof(U), "this type has not supported yet");
     }
   }
 
   template <typename T, typename... Args>
   int insert_impl(bool is_update, const std::string &sql, const T &t,
                   Args &&...args) {
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     int result = sqlite3_prepare_v2(handle_, sql.data(), (int)sql.size(),
                                     &stmt_, nullptr);
     if (result != SQLITE_OK) {
@@ -456,6 +475,9 @@ class sqlite {
   template <typename T, typename... Args>
   int insert_impl(bool is_update, const std::string &sql,
                   const std::vector<T> &v, Args &&...args) {
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     int result = sqlite3_prepare_v2(handle_, sql.data(), (int)sql.size(),
                                     &stmt_, nullptr);
     if (result != SQLITE_OK) {

@@ -82,6 +82,9 @@ class mysql {
     reset_error();
     std::string sql = generate_createtb_sql<T>(std::forward<Args>(args)...);
     sql += " DEFAULT CHARSET=utf8";
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     if (mysql_query(con_, sql.data())) {
       fprintf(stderr, "%s\n", mysql_error(con_));
       return false;
@@ -132,6 +135,9 @@ class mysql {
   bool delete_records(Args &&...where_conditon) {
     reset_error();
     auto sql = generate_delete_sql<T>(std::forward<Args>(where_conditon)...);
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     if (mysql_query(con_, sql.data())) {
       fprintf(stderr, "%s\n", mysql_error(con_));
       return false;
@@ -151,6 +157,9 @@ class mysql {
     constexpr auto SIZE = std::tuple_size_v<T>;
 
     std::string sql = s;
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     constexpr auto Args_Size = sizeof...(Args);
     if constexpr (Args_Size != 0) {
       if (Args_Size != std::count(sql.begin(), sql.end(), '?')) {
@@ -232,7 +241,7 @@ class mysql {
                 param_binds[index].buffer_length = 65536;
               }
               else {
-                static_assert(!sizeof(V), "not support");
+                static_assert(!sizeof(V), "this type has not supported yet");
               }
               index++;
             });
@@ -254,7 +263,7 @@ class mysql {
             index++;
           }
           else {
-            static_assert(!sizeof(U), "not support");
+            static_assert(!sizeof(U), "this type has not supported yet");
           }
         },
         std::make_index_sequence<SIZE>{});
@@ -310,7 +319,7 @@ class mysql {
                   it++;
                 }
                 else {
-                  static_assert(!sizeof(V), "not support");
+                  static_assert(!sizeof(V), "this type has not supported yet");
                 }
                 ++column;
               });
@@ -321,7 +330,7 @@ class mysql {
               it++;
             }
             else {
-              static_assert(!sizeof(W), "not support");
+              static_assert(!sizeof(W), "this type has not supported yet");
             }
             ++column;
           },
@@ -340,6 +349,9 @@ class mysql {
       Args &&...args) {
     reset_error();
     std::string sql = generate_query_sql<T>(args...);
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     constexpr auto SIZE = iguana::get_value<T>();
 
     stmt_ = mysql_stmt_init(con_);
@@ -600,9 +612,16 @@ class mysql {
   constexpr void set_param_bind(std::vector<MYSQL_BIND> &param_binds,
                                 T &&value) {
     MYSQL_BIND param = {};
-
     using U = std::remove_const_t<std::remove_reference_t<T>>;
-    if constexpr (std::is_arithmetic_v<U>) {
+    if constexpr (is_optional_v<U>::value) {
+      if (value.has_value()) {
+        return set_param_bind(param_binds, std::move(value.value()));
+      }
+      else {
+        param.buffer_type = MYSQL_TYPE_NULL;
+      }
+    }
+    else if constexpr (std::is_arithmetic_v<U>) {
       param.buffer_type =
           (enum_field_types)ormpp_mysql::type_to_id(identity<U>{});
       param.buffer = const_cast<void *>(static_cast<const void *>(&value));
@@ -621,6 +640,9 @@ class mysql {
       param.buffer_type = MYSQL_TYPE_BLOB;
       param.buffer = (void *)(value.data());
       param.buffer_length = (unsigned long)value.size();
+    }
+    else {
+      static_assert(!sizeof(U), "this type has not supported yet");
     }
     param_binds.push_back(param);
   }
@@ -672,6 +694,9 @@ class mysql {
 
   template <typename T, typename... Args>
   int insert_impl(const std::string &sql, const T &t, Args &&...args) {
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     stmt_ = mysql_stmt_init(con_);
     if (!stmt_)
       return INT_MIN;
@@ -691,6 +716,9 @@ class mysql {
   template <typename T, typename... Args>
   int insert_impl(const std::string &sql, const std::vector<T> &t,
                   Args &&...args) {
+#if ORMPP_ENABLE_LOG
+    std::cout << sql << std::endl;
+#endif
     stmt_ = mysql_stmt_init(con_);
     if (!stmt_)
       return INT_MIN;
