@@ -39,7 +39,7 @@ int main() {
 #ifdef ORMPP_ENABLE_MYSQL
   {
     dbng<mysql> mysql;
-    if (mysql.connect(ip, "root", password, db)) {
+    if (mysql.connect(ip, "root", password, db, 0, 3306)) {
       mysql.create_datatable<person>(ormpp_auto_key{"id"});
       mysql.delete_records<person>();
       mysql.insert<person>({0, "purecpp"});
