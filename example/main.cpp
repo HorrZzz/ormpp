@@ -19,6 +19,8 @@ using namespace ormpp;
 const char *password = "";
 const char *ip = "127.0.0.1";
 const char *db = "test_ormppdb";
+const int   timeout = 5;
+const int   port = 3306;
 
 struct person {
   int id;
@@ -39,7 +41,7 @@ int main() {
 #ifdef ORMPP_ENABLE_MYSQL
   {
     dbng<mysql> mysql;
-    if (mysql.connect(ip, "root", password, db)) {
+    if (mysql.connect(ip, "root", password, db, timeout, port)) {
       mysql.create_datatable<person>(ormpp_auto_key{"id"});
       mysql.delete_records<person>();
       mysql.insert<person>({0, "purecpp"});
@@ -53,7 +55,7 @@ int main() {
 
   {
     connection_pool<dbng<mysql>>::instance().init(4, ip, "root", password, db,
-                                                  5, 3306);
+                                                  timeout, port);
 
     auto conn = connection_pool<dbng<mysql>>::instance().get();
     conn_guard guard(conn);
