@@ -199,7 +199,7 @@ ormpp屏蔽了不同数据库操作接口的差异，提供了统一简单的数
 
 connect exmple:
 
-	mysql.connect("127.0.0.1", "root", "12345", "testdb", 0, 3306)	//其中第五个参数为timeout，第六个参数为port，这两个参数在连接MySQL时可以省略
+	mysql.connect("127.0.0.1", "root", "12345", "testdb", 5, 3306)	//其中第五个参数为timeout，第六个参数为port
 
 	postgres.connect("127.0.0.1", "root", "12345", "testdb")
 
