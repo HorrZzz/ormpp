@@ -67,9 +67,12 @@ ormpp是modern c++(c++11/14/17)开发的ORM库，目前支持了三种数据库�
 		person p1 = {2, "test2", 3};
 		person p2 = {3, "test3", 4};
 		std::vector<person> v{p1, p2};
-	
+		
+		int timeout = 5;
+		int port = 3306;
+		
 		dbng<mysql> mysql;
-		mysql.connect("127.0.0.1", "dbuser", "yourpwd", "testdb");
+		mysql.connect("127.0.0.1", "dbuser", "yourpwd", "testdb", timeout, port);
 		mysql.create_datatable<person>();
 	
 		mysql.insert(p);
@@ -196,7 +199,7 @@ ormpp屏蔽了不同数据库操作接口的差异，提供了统一简单的数
 
 connect exmple:
 
-	mysql.connect("127.0.0.1", "root", "12345", "testdb")
+	mysql.connect("127.0.0.1", "root", "12345", "testdb", 5, 3306)	//其中第五个参数为timeout，第六个参数为port，这两个参数在连接MySQL时可以省略
 
 	postgres.connect("127.0.0.1", "root", "12345", "testdb")
 
